@@ -48,12 +48,7 @@ class PostResolver {
 		@Arg('postId', () => Int!) postId: number,
 		@Arg('value', () => Int!) value: number,
 		@Ctx()
-		{
-			req,
-			userRepository,
-			postRepository,
-			updootRepository,
-		}: MyContext
+		{ req, userRepository, postRepository, updootRepository }: MyContext
 	): Promise<boolean> {
 		const isUpdoot = value !== -1;
 		const realValue = isUpdoot ? 1 : -1;
@@ -178,7 +173,7 @@ class PostResolver {
 			}
 			FROM post p
 			INNER JOIN public.user u ON u.id = p."creatorId"
-			${cursor ? `WHERE p."createdAt" < $3` : ''}
+			${cursor ? `WHERE p."createdAt" < $${req.session.userId ? '3' : '2'}` : ''}
 			ORDER BY p."createdAt" DESC
 			LIMIT $1
 		`,
@@ -209,22 +204,16 @@ class PostResolver {
 		// 	relations: ['creator', 'updoots'],
 		// });
 
-		const sendPosts = posts
-			.slice(0, realLimit)
-			.map((post: Post) => {
-				return {
-					...post,
-					creator: {
-						...post.creator,
-						createdAt: new Date(
-							post.creator.createdAt
-						),
-						updatedAt: new Date(
-							post.creator.updatedAt
-						),
-					},
-				};
-			});
+		const sendPosts = posts.slice(0, realLimit).map((post: Post) => {
+			return {
+				...post,
+				creator: {
+					...post.creator,
+					createdAt: new Date(post.creator.createdAt),
+					updatedAt: new Date(post.creator.updatedAt),
+				},
+			};
+		});
 
 		return {
 			posts: sendPosts,
@@ -246,9 +235,7 @@ class PostResolver {
 		@Arg('input') input: PostInput,
 		@Ctx() { req, postRepository, userRepository }: MyContext
 	): Promise<Post> {
-		const creator = await userRepository.findOneOrFail(
-			req.session.userId
-		);
+		const creator = await userRepository.findOneOrFail(req.session.userId);
 
 		const post = await postRepository
 			.create({
