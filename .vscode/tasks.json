@@ -58,7 +58,7 @@
                 "dev"
             ],
             "options": {
-                "cwd": "${workspaceFolder}/web"
+                "cwd": "${workspaceFolder}/client"
             },
             "isBackground": true,
             "problemMatcher": [],
