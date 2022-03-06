@@ -12,11 +12,11 @@ import createUrqlClient from '../utils/createUrlClient';
 interface CreatePostProps {}
 
 const CreatePost: FC<CreatePostProps> = ({}) => {
-	const router = useRouter();
 	useIsAuth();
+	const router = useRouter();
 	const [, createPost] = useCreatePostMutation();
 	return (
-		<Layout>
+		<Layout variant='md'>
 			<Formik
 				initialValues={{ title: '', text: '' }}
 				onSubmit={async (values) => {
@@ -26,12 +26,7 @@ const CreatePost: FC<CreatePostProps> = ({}) => {
 			>
 				{({ isSubmitting }) => (
 					<Form>
-						<InputField
-							name='title'
-							placeholder='title'
-							label='Title'
-							autoFocus
-						/>
+						<InputField name='title' placeholder='title' label='Title' autoFocus />
 
 						<Box my={4}>
 							{/* <TextareaField
@@ -39,18 +34,12 @@ const CreatePost: FC<CreatePostProps> = ({}) => {
 								placeholder='text'
 								label='Text'
 							/> */}
-							<InputField
-								textarea
-								name='text'
-								placeholder='text'
-								label='Text'
-							/>
+							<InputField textarea name='text' placeholder='text' label='Text' />
 						</Box>
-						<Button
-							type='submit'
-							colorScheme='teal'
-							isLoading={isSubmitting}
-						>
+						<Button mr={4} onClick={router.back}>
+							Cancel
+						</Button>
+						<Button type='submit' colorScheme='teal' isLoading={isSubmitting}>
 							Post
 						</Button>
 					</Form>

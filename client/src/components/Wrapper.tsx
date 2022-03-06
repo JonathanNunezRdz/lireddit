@@ -1,7 +1,14 @@
 import { Box } from '@chakra-ui/react';
 import { FC } from 'react';
 
-export type WrapperVariant = 'sm' | 'md';
+const MaxWidth = {
+	sm: '400px',
+	md: '800px',
+	lg: '1200px',
+	xl: '100%',
+};
+
+export type WrapperVariant = 'sm' | 'md' | 'lg' | 'xl';
 
 interface WrapperProps {
 	variant?: WrapperVariant;
@@ -9,12 +16,7 @@ interface WrapperProps {
 
 const Wrapper: FC<WrapperProps> = ({ children, variant = 'sm' }) => {
 	return (
-		<Box
-			maxW={variant === 'md' ? '800px' : '400px'}
-			w='100%'
-			mt={8}
-			mx='auto'
-		>
+		<Box maxW={MaxWidth[variant]} w='100%' mt={8} mx='auto'>
 			{children}
 		</Box>
 	);

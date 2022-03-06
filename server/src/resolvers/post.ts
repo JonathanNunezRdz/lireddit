@@ -154,7 +154,11 @@ class PostResolver {
 		const replacements: any[] = [realLimitPlusOne];
 
 		if (req.session.userId) replacements.push(req.session.userId);
-		if (cursor) replacements.push(cursor);
+		let cursorIdx = 2;
+		if (cursor) {
+			replacements.push(cursor);
+			cursorIdx = replacements.length;
+		}
 
 		const posts = await getConnection().query(
 			`
@@ -173,7 +177,7 @@ class PostResolver {
 			}
 			FROM post p
 			INNER JOIN public.user u ON u.id = p."creatorId"
-			${cursor ? `WHERE p."createdAt" < $${req.session.userId ? '3' : '2'}` : ''}
+			${cursor ? `WHERE p."createdAt" < $${cursorIdx}` : ''}
 			ORDER BY p."createdAt" DESC
 			LIMIT $1
 		`,
@@ -223,10 +227,12 @@ class PostResolver {
 
 	@Query(() => Post, { nullable: true })
 	post(
-		@Arg('id') id: number,
+		@Arg('id', () => Int!) id: number,
 		@Ctx() { postRepository }: MyContext
 	): Promise<Post> {
-		return postRepository.findOneOrFail(id);
+		return postRepository.findOneOrFail(id, {
+			relations: ['creator'],
+		});
 	}
 
 	@Mutation(() => Post)
@@ -248,24 +254,57 @@ class PostResolver {
 	}
 
 	@Mutation(() => Post, { nullable: true })
+	@UseMiddleware(isAuth)
 	async updatePost(
-		@Arg('id') id: number,
-		@Arg('title', { nullable: true }) title: string,
-		@Ctx() { postRepository }: MyContext
+		@Arg('id', () => Int!) id: number,
+		@Arg('title') title: string,
+		@Arg('text') text: string,
+		@Ctx() { postRepository, req }: MyContext
 	): Promise<Post | null> {
-		const post = await postRepository.findOneOrFail(id);
-		if (typeof title === 'undefined') return null;
-		post.title = title;
-		await post.save();
-		return post;
+		const result = await postRepository
+			.createQueryBuilder()
+			.update()
+			.set({ title, text })
+			.where('id = :id', { id })
+			.andWhere('"creatorId" = :creatorId', {
+				creatorId: req.session.userId,
+			})
+			.returning('*')
+			.execute();
+		// const result = await postRepository.update(
+		// 	{ id, creator: { id: req.session.userId } },
+		// 	{ title, text }
+		// );
+		// const post = await postRepository.findOneOrFail(id);
+		// post.title = title;
+		// post.text = text;
+		// await post.save();
+
+		return result.raw[0];
 	}
 
 	@Mutation(() => Boolean)
+	@UseMiddleware(isAuth)
 	async deletePost(
-		@Arg('id') id: number,
-		@Ctx() { postRepository }: MyContext
+		@Arg('id', () => Int!) id: number,
+		@Ctx() { req, postRepository }: MyContext
 	): Promise<boolean> {
-		await postRepository.delete(id);
+		// const post = await postRepository.findOne(id, {
+		// 	relations: ['creator'],
+		// });
+		// if (!post) return false;
+		// if (post.creator.id !== req.session.userId) {
+		// 	throw new Error('not authorized');
+		// }
+
+		// await updootRepository.delete({ postId: id });
+		// await post.remove();
+
+		// delete post and updoots (by CASCADE)
+		await postRepository.delete({
+			id,
+			creator: { id: req.session.userId },
+		});
 		return true;
 	}
 }

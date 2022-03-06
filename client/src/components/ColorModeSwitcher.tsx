@@ -1,10 +1,5 @@
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
-import {
-	IconButton,
-	IconButtonProps,
-	useColorMode,
-	useColorModeValue,
-} from '@chakra-ui/react';
+import { IconButton, IconButtonProps, useColorMode, useColorModeValue } from '@chakra-ui/react';
 
 type ColorModeSwitcherProps = Omit<IconButtonProps, 'aria-label'>;
 
@@ -17,7 +12,7 @@ const ColorModeSwitcher = (props: ColorModeSwitcherProps) => {
 		<IconButton
 			size='md'
 			fontSize='lg'
-			variant='ghost'
+			// variant='ghost'
 			color='current'
 			ml='2'
 			onClick={toggleColorMode}

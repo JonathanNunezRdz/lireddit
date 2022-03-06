@@ -14,6 +14,7 @@ const UpdootSection: FC<UpdootSectionProps> = ({ post }) => {
 	const [, vote] = useVoteMutation();
 
 	const handleVote = async (value: number, loadingType: LoadingState) => {
+		if (post.voteStatus === value) return;
 		setLoading(loadingType);
 		await vote({
 			postId: post.id,
@@ -23,12 +24,7 @@ const UpdootSection: FC<UpdootSectionProps> = ({ post }) => {
 	};
 
 	return (
-		<Flex
-			direction={'column'}
-			alignItems={'center'}
-			justifyContent={'center'}
-			mr={4}
-		>
+		<Flex direction={'column'} alignItems={'center'} justifyContent={'center'} mr={4}>
 			<IconButton
 				aria-label='Updoot post'
 				icon={<ChevronUpIcon />}
