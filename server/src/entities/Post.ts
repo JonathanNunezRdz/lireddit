@@ -34,6 +34,10 @@ class Post extends BaseEntity {
 	@Field(() => Int, { nullable: true })
 	voteStatus: number | null;
 
+	@Field()
+	@Column()
+	creatorId: number;
+
 	@Field(() => User)
 	@ManyToOne(() => User, (user) => user.posts)
 	creator: User;

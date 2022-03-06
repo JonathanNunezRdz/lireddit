@@ -122,7 +122,7 @@ class UserResolver {
 	}
 
 	@Query(() => User, { nullable: true })
-	me(@Ctx() { req, userRepository }: MyContext): null | Promise<User> {
+	async me(@Ctx() { req, userRepository }: MyContext): Promise<User | null> {
 		if (!req.session.userId) return null;
 		return userRepository.findOneOrFail(req.session.userId);
 	}
@@ -138,24 +138,25 @@ class UserResolver {
 		const hashedPassword = await hash(options.password);
 
 		try {
-			const result = await userRepository.insert({
-				email: options.email,
-				password: hashedPassword,
-				username: options.username,
-			});
+			// const result = await userRepository.insert({
+			// 	email: options.email,
+			// 	password: hashedPassword,
+			// 	username: options.username,
+			// });
+			// const user = result.raw[0] as User;
+			// console.log(user);
+
+			const result = await userRepository
+				.createQueryBuilder()
+				.insert()
+				.values({
+					username: options.username,
+					email: options.email,
+					password: hashedPassword,
+				})
+				.returning('*')
+				.execute();
 			const user = result.raw[0] as User;
-			// const result = await getConnection()
-			// 	.createQueryBuilder()
-			// 	.insert()
-			// 	.into(User)
-			// 	.values({
-			// 		username: options.username,
-			// 		email: options.email,
-			// 		password: hashedPassword,
-			// 	})
-			// 	.returning('*')
-			// 	.execute();
-			// user = result.raw[0] as User;
 			// store user id session
 			// this will set a cookie on the user
 			// keep them logged in

@@ -91,6 +91,7 @@ export type Post = {
   __typename?: 'Post';
   createdAt: Scalars['DateTime'];
   creator: User;
+  creatorId: Scalars['Float'];
   id: Scalars['Float'];
   points: Scalars['Float'];
   text: Scalars['String'];

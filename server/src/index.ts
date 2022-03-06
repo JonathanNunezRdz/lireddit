@@ -21,6 +21,8 @@ import HelloResolver from './resolvers/hello';
 import PostResolver from './resolvers/post';
 import UserResolver from './resolvers/user';
 import { MyContext } from './types';
+import createUpdootLoader from './utils/createUpdootLoader';
+import createUserLoader from './utils/createUserLoader';
 
 declare module 'express-session' {
 	interface SessionData {
@@ -95,6 +97,8 @@ const main = async () => {
 			postRepository,
 			userRepository,
 			updootRepository,
+			userLoader: createUserLoader(userRepository),
+			updootLoader: createUpdootLoader(updootRepository),
 		}),
 	});
 	await apolloServer.start();

@@ -14,6 +14,7 @@ import {
 } from 'type-graphql';
 import { getConnection } from 'typeorm';
 import Post from '../entities/Post';
+import User from '../entities/User';
 import isAuth from '../middleware/isAuth';
 import { MyContext } from '../types';
 
@@ -38,8 +39,29 @@ class PaginatedPosts {
 @Resolver(Post)
 class PostResolver {
 	@FieldResolver(() => String)
-	textSnippet(@Root() root: Post) {
+	textSnippet(@Root() root: Post): string {
 		return root.text.slice(0, 100);
+	}
+
+	@FieldResolver(() => User)
+	creator(
+		@Root() post: Post,
+		@Ctx() { userLoader }: MyContext
+	): Promise<User> {
+		return userLoader.load(post.creatorId);
+	}
+
+	@FieldResolver(() => Int, { nullable: true })
+	async voteStatus(
+		@Root() post: Post,
+		@Ctx() { updootLoader, req }: MyContext
+	): Promise<number | null> {
+		if (!req.session.userId) return null;
+		const updoot = await updootLoader.load({
+			postId: post.id,
+			userId: req.session.userId,
+		});
+		return updoot ? updoot.value : null;
 	}
 
 	@Mutation(() => Boolean)
@@ -141,8 +163,7 @@ class PostResolver {
 	async posts(
 		@Arg('limit', () => Int!) limit: number,
 		@Arg('cursor', () => String, { nullable: true })
-		cursor: string | null,
-		@Ctx() { req }: MyContext
+		cursor: string | null
 	): Promise<PaginatedPosts> {
 		const realLimit = Math.min(50, limit);
 		const realLimitPlusOne = realLimit + 1;
@@ -151,33 +172,16 @@ class PostResolver {
 		// NA1w7zuWNYeldpj1smq_-HOtd7NQIMpP
 		// kMOZJDWCd2VW2m1rZ_DLQ4PVCabu3bJo
 
-		const replacements: any[] = [realLimitPlusOne];
-
-		if (req.session.userId) replacements.push(req.session.userId);
-		let cursorIdx = 2;
-		if (cursor) {
-			replacements.push(cursor);
-			cursorIdx = replacements.length;
-		}
+		const replacements: any[] = [
+			realLimitPlusOne,
+			cursor || new Date().toISOString(),
+		];
 
 		const posts = await getConnection().query(
 			`
-			SELECT p.*,
-			json_build_object(
-				'id', u.id,
-				'email', u.email,
-				'username', u.username,
-				'createdAt', u."createdAt",
-				'updatedAt', u."updatedAt"
-			) creator,
-			${
-				req.session.userId
-					? '(SELECT value FROM updoot WHERE "userId" = $2 AND "postId" = p.id) "voteStatus"'
-					: 'null as "voteStatus"'
-			}
+			SELECT p.*
 			FROM post p
-			INNER JOIN public.user u ON u.id = p."creatorId"
-			${cursor ? `WHERE p."createdAt" < $${cursorIdx}` : ''}
+			WHERE p."createdAt" < $2
 			ORDER BY p."createdAt" DESC
 			LIMIT $1
 		`,
@@ -199,25 +203,28 @@ class PostResolver {
 
 		// const posts = await postRepository.find({
 		// 	where: {
-		// 		createdAt: LessThan(
-		// 			cursor || new Date().toISOString()
-		// 		),
+		// 		createdAt: LessThan(cursor || new Date().toISOString()),
+		// 		updoots: {
+		// 			userId: req.session.userId,
+		// 		},
 		// 	},
 		// 	order: { createdAt: 'DESC' },
 		// 	take: realLimitPlusOne,
 		// 	relations: ['creator', 'updoots'],
 		// });
 
-		const sendPosts = posts.slice(0, realLimit).map((post: Post) => {
-			return {
-				...post,
-				creator: {
-					...post.creator,
-					createdAt: new Date(post.creator.createdAt),
-					updatedAt: new Date(post.creator.updatedAt),
-				},
-			};
-		});
+		const sendPosts = posts.slice(0, realLimit);
+
+		// const sendPosts = posts.slice(0, realLimit).map((post: Post) => {
+		// 	return {
+		// 		...post,
+		// 		creator: {
+		// 			...post.creator,
+		// 			createdAt: new Date(post.creator.createdAt),
+		// 			updatedAt: new Date(post.creator.updatedAt),
+		// 		},
+		// 	};
+		// });
 
 		return {
 			posts: sendPosts,

@@ -1,5 +1,6 @@
 import { Box, Button, Flex, Heading, Link, Spinner } from '@chakra-ui/react';
 import NextLink from 'next/link';
+import { useRouter } from 'next/router';
 import { FC } from 'react';
 import { useLogoutMutation, useMeQuery } from '../generated/graphql';
 import ColorModeSwitcher from './ColorModeSwitcher';
@@ -7,6 +8,7 @@ import ColorModeSwitcher from './ColorModeSwitcher';
 interface NavBarProps {}
 
 const NavBar: FC<NavBarProps> = ({}) => {
+	const router = useRouter();
 	const [{ fetching: logoutFetching }, logout] = useLogoutMutation();
 	const [{ data, fetching }] = useMeQuery();
 	let body = null;
@@ -44,8 +46,9 @@ const NavBar: FC<NavBarProps> = ({}) => {
 				</NextLink>
 				<Button
 					mr={2}
-					onClick={() => {
-						logout();
+					onClick={async () => {
+						await logout();
+						router.reload();
 					}}
 					isLoading={logoutFetching}
 				>
