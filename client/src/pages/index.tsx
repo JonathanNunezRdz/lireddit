@@ -36,7 +36,7 @@ const Index: FC<indexProps> = ({}) => {
 		limit: 2,
 		cursor: null,
 	});
-	const [{ data, fetching }] = usePostsQuery({
+	const [{ data, fetching, error }] = usePostsQuery({
 		variables,
 	});
 
@@ -48,7 +48,12 @@ const Index: FC<indexProps> = ({}) => {
 		}
 	}, [scrollToBottom, applyScroll, data]);
 
-	if (!fetching && !data) return <Box>No data</Box>;
+	if (!fetching && !data)
+		return (
+			<Layout variant='md'>
+				<Box m='auto'>{error?.message}</Box>
+			</Layout>
+		);
 	return (
 		<Layout variant='md'>
 			{!data && fetching ? (

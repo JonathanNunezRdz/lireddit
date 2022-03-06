@@ -20,10 +20,14 @@ const NavBar: FC<NavBarProps> = ({}) => {
 		body = (
 			<>
 				<NextLink href='/login' passHref>
-					<Link mr={4}>Login</Link>
+					<Button as={Link} mr={4}>
+						Login
+					</Button>
 				</NextLink>
 				<NextLink href='/register' passHref>
-					<Link>Register</Link>
+					<Button as={Link} mr={2}>
+						Register
+					</Button>
 				</NextLink>
 			</>
 		);

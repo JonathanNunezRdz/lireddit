@@ -50,7 +50,7 @@ class UserResolver {
 	async changePassword(
 		@Arg('token') token: string,
 		@Arg('newPassword') newPassword: string,
-		@Ctx() { redis, req }: MyContext
+		@Ctx() { redis, req, userRepository }: MyContext
 	): Promise<UserResponse> {
 		if (newPassword.length <= 2)
 			return {
@@ -75,7 +75,7 @@ class UserResolver {
 			};
 
 		const id = parseInt(userId);
-		const user = await User.findOne(id);
+		const user = await userRepository.findOne(id);
 		if (!user)
 			return {
 				errors: [
@@ -86,7 +86,7 @@ class UserResolver {
 				],
 			};
 
-		await User.update(
+		await userRepository.update(
 			{ id },
 			{ password: await hash(newPassword) }
 		);
@@ -100,9 +100,9 @@ class UserResolver {
 	@Mutation(() => Boolean)
 	async forgotPassword(
 		@Arg('email') email: string,
-		@Ctx() { redis }: MyContext
+		@Ctx() { redis, userRepository }: MyContext
 	) {
-		const user = await User.findOne({ where: { email } });
+		const user = await userRepository.findOne({ where: { email } });
 		if (!user) return true;
 
 		const token = v4();
@@ -122,15 +122,15 @@ class UserResolver {
 	}
 
 	@Query(() => User, { nullable: true })
-	me(@Ctx() { req }: MyContext): null | Promise<User> {
+	me(@Ctx() { req, userRepository }: MyContext): null | Promise<User> {
 		if (!req.session.userId) return null;
-		return User.findOneOrFail(req.session.userId);
+		return userRepository.findOneOrFail(req.session.userId);
 	}
 
 	@Mutation(() => UserResponse)
 	async register(
 		@Arg('options') options: UsernamePasswordInput,
-		@Ctx() { req }: MyContext
+		@Ctx() { req, userRepository }: MyContext
 	): Promise<UserResponse> {
 		const errors = validateRegister(options);
 		if (errors) return { errors };
@@ -138,11 +138,12 @@ class UserResolver {
 		const hashedPassword = await hash(options.password);
 
 		try {
-			const user = await User.create({
+			const result = await userRepository.insert({
 				email: options.email,
 				password: hashedPassword,
 				username: options.username,
-			}).save();
+			});
+			const user = result.raw[0] as User;
 			// const result = await getConnection()
 			// 	.createQueryBuilder()
 			// 	.insert()
@@ -164,9 +165,7 @@ class UserResolver {
 			// duplication error
 			//|| error.detail.includes('already exists')) {
 			if (error.code === '23505') {
-				const key = error.constraint.includes(
-					'username'
-				)
+				const key = error.constraint.includes('username')
 					? 'username'
 					: 'email';
 				return {
@@ -197,15 +196,12 @@ class UserResolver {
 	async login(
 		@Arg('usernameOrEmail') usernameOrEmail: string,
 		@Arg('password') password: string,
-		@Ctx() { req }: MyContext
+		@Ctx() { req, userRepository }: MyContext
 	): Promise<UserResponse> {
 		let key: 'email' | 'username' = 'username';
-		if (
-			usernameOrEmail.includes('@') &&
-			validateEmail(usernameOrEmail)
-		)
+		if (usernameOrEmail.includes('@') && validateEmail(usernameOrEmail))
 			key = 'email';
-		const user = await User.findOne({
+		const user = await userRepository.findOne({
 			where: { [key]: usernameOrEmail },
 		});
 
@@ -216,9 +212,7 @@ class UserResolver {
 						field: 'usernameOrEmail',
 						message: `${key
 							.substring(0, 1)
-							.toUpperCase()}${key.slice(
-							1
-						)} doesn't exist`,
+							.toUpperCase()}${key.slice(1)} doesn't exist`,
 					},
 				],
 			};

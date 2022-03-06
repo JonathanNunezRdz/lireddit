@@ -156,7 +156,6 @@ const createUrqlClient = (ssrExchange: any, ctx: any) => {
 								`,
 								{ id: postId } as any
 							);
-							console.log(data);
 
 							if (data) {
 								if (data.voteStatus === value) return;
