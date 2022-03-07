@@ -5,6 +5,7 @@ import {
 import { ApolloServer } from 'apollo-server-express';
 import connectRedis from 'connect-redis';
 import cors from 'cors';
+import 'dotenv-safe/config';
 import express from 'express';
 import session from 'express-session';
 import { createServer } from 'http';
@@ -31,29 +32,28 @@ declare module 'express-session' {
 }
 
 const main = async () => {
-	await createConnection({
+	const conn = await createConnection({
 		type: 'postgres',
-		database: 'lireddit2',
-		username: 'postgres',
-		password: '1793',
+		url: process.env.DATABASE_URL,
 		logging: true,
-		synchronize: true,
+		// synchronize: true,
 		entities: [Post, User, Updoot],
 		migrations: [join(__dirname, './migrations/*')],
 	});
-	// await conn.runMigrations();
+	await conn.runMigrations();
 	// await Post.delete({});
 
 	const app = express();
 
 	const RedisStore = connectRedis(session);
-	const redis = new Redis();
+	const redis = new Redis(process.env.REDIS_URL);
 
 	// redisClient.connect()
 	// await redisClient.connect().catch(console.error);
+	app.set('proxy', 1);
 	app.use(
 		cors({
-			origin: 'http://localhost:3000',
+			origin: process.env.CORS_ORIGIN,
 			credentials: true,
 		})
 	);
@@ -67,12 +67,12 @@ const main = async () => {
 			cookie: {
 				maxAge: 1000 * 60 * 60 * 24 * 365 * 10, // 10 years
 				httpOnly: true,
-				secure: __prod__, // cookie only works in https when in production
 				sameSite: 'lax', // csrf
+				secure: __prod__, // cookie only works in https when in production
 			},
-			secret: 'aksdjyfbtaksjdfhgbkgajwehf',
-			resave: false,
 			saveUninitialized: false,
+			secret: process.env.SESSION_SECRET,
+			resave: false,
 		})
 	);
 
@@ -104,7 +104,7 @@ const main = async () => {
 	await apolloServer.start();
 	apolloServer.applyMiddleware({ app, cors: false });
 	await new Promise<void>((resolve) =>
-		httpServer.listen({ port: 4000 }, resolve)
+		httpServer.listen({ port: parseInt(process.env.PORT) }, resolve)
 	);
 	console.log(
 		`🚀 Server ready at http://localhost:4000${apolloServer.graphqlPath}`
